@@ -1,3 +1,6 @@
+# utils for ipython notebook
+remove_output.py
+
 # cython generated code
 multibody_system*
 
