@@ -5,8 +5,9 @@ import sympy as sym
 import sympy.physics.mechanics as me
 me.Vector.simp = False  # to increase computation speed
 
-
 from pydy_code_gen.code import generate_ode_function
+
+import functools
 
 
 def formulate_nchain_parameters(n):
@@ -138,9 +139,8 @@ def make_kane_eom(dynamic, setup, fbd):
     (fr, frstar) = kane.kanes_equations(fbd['fl'], fbd['bodies'])
     mass = kane.mass_matrix_full
     forcing = kane.forcing_full
-    kd_dict = kane.kinddict()
 
-    eom = dict(kane=kane, fr=fr, frstar=frstar, mass=mass, forcing=forcing, kd_dict=kd_dict)
+    eom = dict(kane=kane, fr=fr, frstar=frstar, mass=mass, forcing=forcing)
 
     return eom
 
@@ -210,4 +210,35 @@ def equal_snake(n, mtot=40.5, ltot=68.6, wid=2.2):
     return masses, lengths, widths, mom_inertias
 
 
+def callable_matrices(dynamic, eom, consts):
+    """Take the equations of motion and make the mass matrix
+    and forcing vector callable so we can simulate the system.
 
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+
+    """
+
+    # dummy symbols used for dynamamic variables
+    dyn_symbols = dynamic['q'] + dynamic['u']
+    dummy_symbols = [sym.Dummy() for i in dyn_symbols]
+    dummy_dict = dict(zip(dyn_symbols, dummy_symbols))
+
+    # substitute dummy symbols into mass matrix and forcing vector
+    kd_dict = eom['kane'].kindiffdict()                              # solved kinematical differential equations
+    F = eom['forcing'].subs(kd_dict).subs(dummy_dict)      # substitute into the forcing vector
+    M = eom['mass'].subs(kd_dict).subs(dummy_dict)  # substitute into the mass matrix
+
+    # callable matrices
+    F_func = sym.lambdify(consts['names'] + dummy_symbols, F)
+    M_func = sym.lambdify(consts['names'] + dummy_symbols, M)
+
+    # partially evaluate matrices to run faster (maybe 15% or so)
+    ffunc = functools.partial(F_func, *consts['vals'])
+    mfunc = functools.partial(M_func, *consts['vals'])
+
+    return F_func, M_func, ffunc, mfunc
