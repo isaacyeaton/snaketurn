@@ -1,6 +1,11 @@
 from __future__ import division
 
 import numpy as np
+
+import matplotlib.pyplot as plt
+from matplotlib import animation
+from matplotlib.patches import Ellipse, Rectangle
+
 import sympy as sym
 import sympy.physics.mechanics as me
 me.Vector.simp = False  # to increase computation speed
@@ -104,7 +109,7 @@ def formulate_nchain_parameters(n):
     for i in range(n):
         torques.append((frames[i + 1], (T[i] - T[i + 1]) * frames[0].z))
 
-    fl = forces + torques
+    fl = forces #+ torques
 
     # setup dictionaries of values to return
     dynamic = dict(q=q, u=u, T=T)
@@ -207,7 +212,10 @@ def equal_snake(n, mtot=40.5, ltot=68.6, wid=2.2):
     #mom_inertias = masses * (lengths**2 + width**2) / 12
     mom_inertias = masses / 4 * widths**2 + masses / 12 * lengths**2
 
-    return masses, lengths, widths, mom_inertias
+    # store the values in a dictionary
+    snake = dict(m=masses, l=lengths, w=widths, I=mom_inertias)
+
+    return snake
 
 
 def callable_matrices(dynamic, eom, consts):
@@ -242,3 +250,118 @@ def callable_matrices(dynamic, eom, consts):
     mfunc = functools.partial(M_func, *consts['vals'])
 
     return F_func, M_func, ffunc, mfunc
+
+
+def organize_data(y, n, snake_dict):
+    """Organize the data so it can be animated with ellipses.
+    """
+
+    ms = snake_dict['m']
+    ls = snake_dict['l']
+    npts = y.shape[0]
+    angs = y[:, :n]
+    rads = angs.cumsum(axis=1)
+    degs = np.rad2deg(rads)
+
+    jtx, jty = y[:, n:n + 2].T
+    jtx = jtx.reshape(-1, 1)
+    jty = jty.reshape(-1, 1)
+
+    mcx, mcy = [], []
+    for i in range(n):
+        dx = ls[i] * np.cos(rads[:, i])
+        dy = ls[i] * np.sin(rads[:, i])
+
+        mcx.append((jtx[:, i] + dx / 2).flatten())
+        mcy.append((jty[:, i] + dy / 2).flatten())
+
+        x = (jtx[:, i] + dx).reshape(-1, 1)
+        y = (jty[:, i] + dy).reshape(-1, 1)
+
+        jtx = np.hstack((jtx, x))
+        jty = np.hstack((jty, y))
+
+    mcx = np.array(mcx).T
+    mcy = np.array(mcy).T
+
+    # center of mass
+    mms = np.array(ms)
+    comx = (mcx * mms).sum(axis=1) / mms.sum()
+    comy = (mcy * mms).sum(axis=1) / mms.sum()
+
+    return rads, degs, jtx, jty, mcx, mcy, comx, comy
+
+
+def n_movie_maker(n, snake_dict, ts, y, limx=(-1, 1), limy=(-1, 1), hst=50, internal=100):
+
+    rads, degs, jtx, jty, mcx, mcy, comx, comy = organize_data(y, n, snake_dict)
+
+    ms = snake_dict['m']
+    ls = snake_dict['l']
+    ws = snake_dict['w']
+    ii = 0
+    st = 0
+
+    fig, ax = plt.subplots(1, 1, sharex=True, sharey=True, figsize=(9, 9))
+    ax.axis('image')
+    ax.set_xlim(limx)
+    ax.set_ylim(limy)
+
+    fig.set_facecolor('w')
+    fig.tight_layout()
+
+    time_fmt = '{0:2.3} sec'
+    time_text = ax.text(0.05, 0.9, '', transform=ax.transAxes, fontsize='large')
+
+    ellipse_params = dict(alpha=.5, color='green')
+    patches = []
+    for i in range(n):
+        e = Ellipse(xy=(mcx[ii, i], mcy[ii, i]),
+                    width=ws[i], height=1.05 * ls[i],
+                    angle=degs[ii, i] - 90, **ellipse_params)
+        ax.add_patch(e)
+        patches.append(e)
+
+    head, = ax.plot(jtx[ii, 0], jty[ii, 0], 'go', alpha=.6, markersize=7)
+    jlines, mclines = [], []
+    for i in range(n):
+        jline, = ax.plot(jtx[st:ii, i + 1], jty[st:ii, i + 1], 'b--', alpha=.5)
+        mcline, = ax.plot(mcx[st:ii, i], mcy[st:ii, i], 'r', alpha=.5)
+        jlines.append(jline)
+        mclines.append(mcline)
+
+    coml, = ax.plot(comx[st:ii], comy[st:ii], 'k-', lw=2, alpha=.9)
+
+    def init():
+        ii = 0
+        head.set_data(jtx[ii, 0], jty[ii, 0])
+        for i in range(n):
+            patches[i].set_alpha(.3)
+        time_text.set_text('')
+        return [head, time_text] + patches
+
+    def animate(ii):
+
+        st = ii - hst
+        if st < 0:
+            st = 0
+
+        head.set_data(jtx[ii, 0], jty[ii, 0])
+        for i in range(n):
+            patches[i].set_visible(True)
+            patches[i].set_alpha(.5)
+            patches[i].center = (mcx[ii, i], mcy[ii, i])
+            patches[i].angle = degs[ii, i] - 90
+            jlines[i].set_data(jtx[st:ii, i + 1], jty[st:ii, i + 1])
+            mclines[i].set_data(mcx[st:ii, i], mcy[st:ii, i])
+
+        time_text.set_text(time_fmt.format(ts[ii]))
+
+        coml.set_data(comx[st:ii], comy[st:ii])
+
+        return patches + [head, coml, time_text] + jlines + mclines
+
+    anim = animation.FuncAnimation(fig, animate, frames=len(ts),
+                interval=internal, blit=True, repeat=False, init_func=init)
+
+    return anim
