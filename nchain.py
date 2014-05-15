@@ -111,3 +111,58 @@ def formulate_nchain_parameters(n):
     fbd = dict(kd=kd, fl=fl, bodies=bodies)
 
     return dynamic, symbol, setup, fbd
+
+
+def make_kane_eom(dynamic, setup, fbd):
+    """Formulate the equations of motion using Kane's method.
+
+    Paramters
+    ---------
+    The dictionaries that are returned from formulated_nchain_parameters
+
+    Returns
+    -------
+
+    """
+
+    # equations of motion using Kane's method
+    kane = me.KanesMethod(frame=setup['frames'][0],
+                          q_ind=dynamic['q'],
+                          u_ind=dynamic['u'],
+                          kd_eqs=fbd['kd'],
+                          q_dependent=[],
+                          configuration_constraints=[],
+                          u_dependent=[],
+                          velocity_constraints=[])
+    (fr, frstar) = kane.kanes_equations(fbd['fl'], fbd['bodies'])
+    mass = kane.mass_matrix_full
+    forcing = kane.forcing_full
+
+    eom = dict(kane=kane, fr=fr, frstar=frstar, mass=mass, forcing=forcing)
+
+    return eom
+
+
+def make_lagrange_eom(dynamic, setup, fbd):
+    """Formulate the equations of motion using Lagranges's method.
+
+    Paramters
+    ---------
+    The dictionaries that are returned from formulated_nchain_parameters
+
+    Returns
+    -------
+
+    """
+
+    # calculate the Lagrangian
+    L = me.Lagrangian(setup['frames'][0], *fbd['bodies'])
+    lagrange = me.LagrangesMethod(L, dynamic['q'], forcelist=fbd['fl'], frame=setup['frames'][0])
+
+    langeqn = lagrange.form_lagranges_equations()
+    mass = lagrange.mass_matrix_full
+    forcing = lagrange.forcing_full
+
+    eom = dict(L=L, lagrange=lagrange, langeqn=langeqn, mass=mass, forcing=forcing)
+
+    return eom
