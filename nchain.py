@@ -20,6 +20,7 @@ def formulate_nchain_parameters(n):
 
     Returns
     -------
+    TODO: fixme These are acutally 4 dicts filled with lists
     q : list
         Generalized coordinates
     u : list
@@ -137,8 +138,9 @@ def make_kane_eom(dynamic, setup, fbd):
     (fr, frstar) = kane.kanes_equations(fbd['fl'], fbd['bodies'])
     mass = kane.mass_matrix_full
     forcing = kane.forcing_full
+    kd_dict = kane.kinddict()
 
-    eom = dict(kane=kane, fr=fr, frstar=frstar, mass=mass, forcing=forcing)
+    eom = dict(kane=kane, fr=fr, frstar=frstar, mass=mass, forcing=forcing, kd_dict=kd_dict)
 
     return eom
 
@@ -166,3 +168,46 @@ def make_lagrange_eom(dynamic, setup, fbd):
     eom = dict(L=L, lagrange=lagrange, langeqn=langeqn, mass=mass, forcing=forcing)
 
     return eom
+
+
+def equal_snake(n, mtot=40.5, ltot=68.6, wid=2.2):
+    """Get masses, lengths, and moments of inertia for snake, assuming
+    each segment is the same.
+
+    Parameters
+    ----------
+    n : int
+        Number of segments
+    mtot : float
+        Total mass of the snake in *grams*
+    ltot : float
+        Total length of the snake in *cm*
+    wid : float (default=2)
+        Width of the snake in *cm*
+
+    Returns
+    -------
+    masses, lengths, widths, mom_inertia : lists
+        Equal snake parameters
+
+    Note
+    ----
+    The moment of inertias are calculated based on a filled half cylinder
+    with radius of `width'. This approximate will become less valid as
+    `n' increases and the aspect ratio of the snake decreases.
+    """
+
+    # normalized each chain
+    norm = np.ones(n) / n
+
+    masses = 40.5 / 1000 * norm  # kg
+    lengths = 68.6 / 100 * norm  # m
+    widths = wid / 100 * norm  # m
+
+    #mom_inertias = masses * (lengths**2 + width**2) / 12
+    mom_inertias = masses / 4 * widths**2 + masses / 12 * lengths**2
+
+    return masses, lengths, widths, mom_inertias
+
+
+
