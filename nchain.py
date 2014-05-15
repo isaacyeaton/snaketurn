@@ -292,7 +292,7 @@ def organize_data(y, n, snake_dict):
     return rads, degs, jtx, jty, mcx, mcy, comx, comy
 
 
-def n_movie_maker(n, snake_dict, ts, y, limx=(-1, 1), limy=(-1, 1), hst=50, internal=100):
+def n_movie_maker(n, snake_dict, ts, y, limx=(-1, 1), limy=(-1, 1), hst=50, interval=100):
 
     rads, degs, jtx, jty, mcx, mcy, comx, comy = organize_data(y, n, snake_dict)
 
@@ -324,10 +324,11 @@ def n_movie_maker(n, snake_dict, ts, y, limx=(-1, 1), limy=(-1, 1), hst=50, inte
 
     head, = ax.plot(jtx[ii, 0], jty[ii, 0], 'go', alpha=.6, markersize=7)
     jlines, mclines = [], []
-    for i in range(n):
-        jline, = ax.plot(jtx[st:ii, i + 1], jty[st:ii, i + 1], 'b--', alpha=.5)
-        mcline, = ax.plot(mcx[st:ii, i], mcy[st:ii, i], 'r', alpha=.5)
+    for i in range(n + 1):
+        jline, = ax.plot(jtx[st:ii, i], jty[st:ii, i], 'b--', alpha=.5)
         jlines.append(jline)
+    for i in range(n):
+        mcline, = ax.plot(mcx[st:ii, i], mcy[st:ii, i], 'r', alpha=.5)
         mclines.append(mcline)
 
     coml, = ax.plot(comx[st:ii], comy[st:ii], 'k-', lw=2, alpha=.9)
@@ -352,8 +353,10 @@ def n_movie_maker(n, snake_dict, ts, y, limx=(-1, 1), limy=(-1, 1), hst=50, inte
             patches[i].set_alpha(.5)
             patches[i].center = (mcx[ii, i], mcy[ii, i])
             patches[i].angle = degs[ii, i] - 90
-            jlines[i].set_data(jtx[st:ii, i + 1], jty[st:ii, i + 1])
+            jlines[i].set_data(jtx[st:ii, i], jty[st:ii, i])
             mclines[i].set_data(mcx[st:ii, i], mcy[st:ii, i])
+        for i in range(n + 1):
+            jlines[i].set_data(jtx[st:ii, i], jty[st:ii, i])
 
         time_text.set_text(time_fmt.format(ts[ii]))
 
@@ -362,6 +365,6 @@ def n_movie_maker(n, snake_dict, ts, y, limx=(-1, 1), limy=(-1, 1), hst=50, inte
         return patches + [head, coml, time_text] + jlines + mclines
 
     anim = animation.FuncAnimation(fig, animate, frames=len(ts),
-                interval=internal, blit=True, repeat=False, init_func=init)
+                interval=interval, blit=True, repeat=False, init_func=init)
 
     return anim
