@@ -15,6 +15,11 @@ from pydy_code_gen.code import generate_ode_function
 import functools
 
 
+def printer(exp):
+    """Print the expression so it can be copied into latex.
+    """
+    return str(me.mlatex(exp))
+
 def formulate_nchain_parameters(n):
     """Formulate the n-chain system, returning a bunch of sympy objects
     to make the equations of motion.
@@ -142,10 +147,11 @@ def make_kane_eom(dynamic, setup, fbd):
                           u_dependent=[],
                           velocity_constraints=[])
     (fr, frstar) = kane.kanes_equations(fbd['fl'], fbd['bodies'])
+    kanezero = fr + frstar
     mass = kane.mass_matrix_full
     forcing = kane.forcing_full
 
-    eom = dict(kane=kane, fr=fr, frstar=frstar, mass=mass, forcing=forcing)
+    eom = dict(kane=kane, fr=fr, frstar=frstar, mass=mass, forcing=forcing, kanzero=kanezero)
 
     return eom
 
