@@ -16,9 +16,19 @@ import functools
 
 
 def printer(exp):
-    """Print the expression so it can be copied into latex.
+    """Print the expression so it can be copied into latex. Call print
+    on the returned string and then copy and paste into the document. Or
+    save it to a file.
     """
     return str(me.mlatex(exp))
+
+
+def simp(exp):
+    """Sign and trig simplify an expression. This can take a *long*
+    time, especially when trying to render the expression in a notebook!
+    """
+    return sym.signsimp(sym.trigsimp(exp))
+
 
 def formulate_nchain_parameters(n):
     """Formulate the n-chain system, returning a bunch of sympy objects
@@ -151,7 +161,7 @@ def make_kane_eom(dynamic, setup, fbd):
     mass = kane.mass_matrix_full
     forcing = kane.forcing_full
 
-    eom = dict(kane=kane, fr=fr, frstar=frstar, mass=mass, forcing=forcing, kanzero=kanezero)
+    eom = dict(kane=kane, fr=fr, frstar=frstar, mass=mass, forcing=forcing, kanezero=kanezero)
 
     return eom
 
