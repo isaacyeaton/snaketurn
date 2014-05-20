@@ -265,7 +265,7 @@ def callable_matrices(dynamic, eom, consts):
     ffunc = functools.partial(F_func, *consts['vals'])
     mfunc = functools.partial(M_func, *consts['vals'])
 
-    return F_func, M_func, ffunc, mfunc
+    return F_func, M_func, ffunc, mfunc, dummy_dict
 
 
 def organize_data(y, n, snake_dict):
