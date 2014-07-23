@@ -10,7 +10,7 @@ import sympy as sym
 import sympy.physics.mechanics as me
 me.Vector.simp = False  # to increase computation speed
 
-from pydy_code_gen.code import generate_ode_function
+from pydy.codegen.code import generate_ode_function
 
 import functools
 
